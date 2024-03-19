@@ -10,6 +10,7 @@
     "axios": "^1.6.8",
     "firebase": "^10.9.0",
     "firebase-admin": "^12.0.0",
-    "fs": "^0.0.1-security"
+    "fs": "^0.0.1-security",
+    "node-telegram-bot-api": "^0.65.1"
   }
 }

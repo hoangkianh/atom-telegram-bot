@@ -10,6 +10,7 @@ import {
   doc
 } from 'firebase/firestore'
 import firestore from './firebase-config.js'
+import sendTelegramMessage from './telegram-bot.js'
 
 let cachedData = {}
 
@@ -24,18 +25,40 @@ const callAPI = async wallet => {
     const response = await axios.get(API_URL)
     const { txResults } = response.data[0]
 
-    const newTxResults = txResults.filter(
+    const newTxResults = txResults.filter(tx =>
+      tx.tx_messages.some(msg => msg.signer === address)
+    )
+
+    // Lọc previousTxHashes để chỉ lưu trữ các tx_hash mà có ít nhất một tx_message có signer trùng khớp với địa chỉ "address"
+    previousTxHashes = new Set(
+      previousTxResults
+        .filter(tx => tx.tx_messages.some(msg => msg.signer === address))
+        .map(tx => tx.tx_hash)
+    )
+
+    const filteredNewTxResults = newTxResults.filter(
       tx => !previousTxHashes.has(tx.tx_hash)
     )
 
-    if (newTxResults.length > 0) {
-      console.log(`✅ New transactions for address ${address}:`, newTxResults)
-      await saveTxResultsOnFirestore(address, newTxResults)
+    if (filteredNewTxResults.length > 0) {
+      console.log(
+        `✅ New transactions for address ${address}:`,
+        filteredNewTxResults
+      )
+      await saveTxResultsOnFirestore(address, filteredNewTxResults)
+
+      sendTelegramMessage(
+        `New transactions for address ${address}:\n${JSON.stringify(
+          filteredNewTxResults,
+          null,
+          2
+        )}`
+      )
     } else {
       console.log(`No new transactions for address ${address}`)
     }
 
-    cachedData[address] = previousTxResults.concat(newTxResults)
+    cachedData[address] = previousTxResults.concat(filteredNewTxResults)
   } catch (error) {
     console.error(`Error calling API for ${address}:`, error)
   }
