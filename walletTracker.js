@@ -1,3 +1,5 @@
+import TelegramBot from 'node-telegram-bot-api'
+import { Command } from 'commander'
 import axios from 'axios'
 import fs from 'fs/promises'
 import {
@@ -11,6 +13,23 @@ import {
 } from 'firebase/firestore'
 import firestore from './firebaseConfig.js'
 
+const token = '7097049447:AAHHufxTLKkgs15uLMXyiXTX_C-PJnfxdpk'
+const chatId = '-4175958558'
+
+const bot = new TelegramBot(token, { polling: true })
+const program = new Command()
+program.option('-n, --name <fileName>', 'Specify the name of the config file')
+program.parse()
+
+if (!program.opts().name) {
+  console.error(
+    'Please specify the name of the config file using --name option'
+  )
+  process.exit(1)
+}
+
+const fileName = `${program.opts().name}.json`
+
 let cachedData = {}
 const TYPES = [
   '/cosmos.bank.v1beta1.MsgSend',
@@ -18,7 +37,7 @@ const TYPES = [
   //   '/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward',
 ]
 
-const callAPI = async (wallet, fileName, wallets, bot, chatId) => {
+const callAPI = async (wallet, fileName, wallets) => {
   const { address, hex, name } = wallet
   const walletName = `${fileName.toUpperCase()}-${name}`
 
@@ -46,14 +65,7 @@ const callAPI = async (wallet, fileName, wallets, bot, chatId) => {
         filteredNewTxResults
       )
       await saveTxHashesOnFirestore(address, walletName, filteredNewTxResults)
-      processTransactions(
-        filteredNewTxResults,
-        address,
-        walletName,
-        wallets,
-        bot,
-        chatId
-      )
+      processTransactions(filteredNewTxResults, address, walletName, wallets)
     } else {
       console.log(`No new transactions for ${walletName}`)
     }
@@ -66,14 +78,14 @@ const callAPI = async (wallet, fileName, wallets, bot, chatId) => {
   }
 }
 
-export const trackWallet = async (fileName, bot, chatId) => {
+const trackWallet = async fileName => {
   try {
     const fileContent = await fs.readFile(`wallets/${fileName}`, 'utf8')
     const wallets = JSON.parse(fileContent)
 
     await Promise.all(
       wallets.map(wallet =>
-        callAPI(wallet, fileName.replace('.json', ''), wallets, bot, chatId)
+        callAPI(wallet, fileName.replace('.json', ''), wallets)
       )
     )
   } catch (error) {
@@ -150,14 +162,7 @@ const saveTxHashesOnFirestore = async (address, walletName, newTxResults) => {
   }
 }
 
-const processTransactions = (
-  transactions,
-  address,
-  walletName,
-  wallets,
-  bot,
-  chatId
-) => {
+const processTransactions = (transactions, address, walletName, wallets) => {
   transactions.forEach(tx => {
     const type = tx.tx_messages[0].type
     const msg_string = JSON.parse(tx.tx_messages[0].msg_string)
@@ -192,15 +197,11 @@ const processTransactions = (
         break
     }
 
-    sendTelegramMessage(
-      bot,
-      chatId,
-      `${message} \n\n [View on Mintscan](${txLink})`
-    )
+    sendTelegramMessage(`${message} \n\n [View on Mintscan](${txLink})`)
   })
 }
 
-const sendTelegramMessage = (bot, chatId, message) => {
+const sendTelegramMessage = message => {
   bot
     .sendMessage(chatId, message, {
       parse_mode: 'Markdown'
@@ -208,3 +209,8 @@ const sendTelegramMessage = (bot, chatId, message) => {
     .then(() => console.log('Message sent successfully'))
     .catch(error => console.error('Error sending message:', error))
 }
+
+setInterval(() => {
+  //   callAPIsForAllFiles()
+  trackWallet(fileName)
+}, 10000)
