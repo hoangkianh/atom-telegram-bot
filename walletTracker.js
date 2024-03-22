@@ -196,7 +196,7 @@ const processTransactions = (transactions, address, walletName, wallets) => {
         break
     }
 
-    // sendTelegramMessage(`${message} \n\n [View on Mintscan](${txLink})`)
+    sendTelegramMessage(`${message} \n\n [View on Mintscan](${txLink})`)
   })
 }
 
