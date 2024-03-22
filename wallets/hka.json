@@ -8,5 +8,25 @@
     "address": "cosmos1tkw3qajtmew9cj7jl8ttwmlnklnddkwnjfklkr",
     "hex": "03a9ff7cef8f5fd2d97eacdfcb09fec4d3f5283a2265c943e47bfcc8f651c56f7d",
     "name": 2
+  },
+  {
+    "address": "cosmos1gtruddyrwcpqpe098hlludfptssf80c58wrpf7",
+    "hex": "0203f798cb23ac73c49757a543a07884164d8e1c811c4e83d5ce99a1d68de71b0f",
+    "name": 3
+  },
+  {
+    "address": "cosmos1djsp2q2sj08jq7u22tajvmqh3c5yzjf5qsm6cx",
+    "hex": "0354df22aae504c594708cf5e35b25f5ab057d9cd00ceecc1df4ad1c3e5bf11c25",
+    "name": 4
+  },
+  {
+    "address": "cosmos1shghdzjs55a58vgmg4tx0hs9fj6ztlf2an9syh",
+    "hex": "0392b653ee643226a51a4a87d191a263af36e0bf6a363247afeef5c47de1bbdf6c",
+    "name": 5
+  },
+  {
+    "address": "cosmos1vs7u5an2rvmaj5p2hzpacan7h32dgva25737n4",
+    "hex": "03b7ed45246aef417821f52d5cff624206c23f25ce63838b49080b45b5e1dffde3",
+    "name": 6
   }
 ]

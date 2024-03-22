@@ -15,8 +15,8 @@ import sendTelegramMessage from './telegram-bot.js'
 let cachedData = {}
 const TYPES = [
   '/cosmos.bank.v1beta1.MsgSend',
-  '/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward',
   '/cosmos.staking.v1beta1.MsgUndelegate'
+  //   '/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward',
 ]
 
 const callAPI = async (wallet, fileName, wallets) => {
@@ -167,9 +167,9 @@ const processTransactions = (transactions, address, walletName, wallets) => {
 
         message = `➡️ Wallet [${walletName}](${walletLink}) just sent ${amount} ATOM to [${toWalletName}](${toWalletMintscanLink}).`
         break
-      case '/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward':
-        message = `💰 Wallet [${walletName}](${walletLink}) just claimed reward`
-        break
+      //   case '/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward':
+      //     message = `💰 Wallet [${walletName}](${walletLink}) just claimed reward`
+      //     break
       case '/cosmos.staking.v1beta1.MsgUndelegate':
         const unstakedAmount = Number(msg_string?.amount?.amount) / 1_000_000
 
