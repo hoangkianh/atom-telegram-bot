@@ -21,14 +21,16 @@ const program = new Command()
 program.option('-n, --name <fileName>', 'Specify the name of the config file')
 program.parse()
 
-if (!program.opts().name) {
+const devName = program.opts().name
+
+if (!devName) {
   console.error(
     'Please specify the name of the config file using --name option'
   )
   process.exit(1)
 }
 
-const fileName = `${program.opts().name}.json`
+const fileName = `${devName}.json`
 
 let cachedData = {}
 const TYPES = [
@@ -108,7 +110,7 @@ const trackWallet = async fileName => {
 const getPreviousTxHashesFromFirestore = async address => {
   try {
     const q = query(
-      collection(firestore, 'transactions'),
+      collection(firestore, devName),
       where('address', '==', address)
     )
     const snapshot = await getDocs(q)
@@ -131,7 +133,7 @@ const getPreviousTxHashesFromFirestore = async address => {
 const saveTxHashesOnFirestore = async (address, walletName, newTxResults) => {
   try {
     const q = query(
-      collection(firestore, 'transactions'),
+      collection(firestore, devName),
       where('address', '==', address)
     )
     const snapshot = await getDocs(q)
@@ -145,13 +147,10 @@ const saveTxHashesOnFirestore = async (address, walletName, newTxResults) => {
         txs: [...Array.from(txHashes), ...currentData.txs]
       }
 
-      await updateDoc(
-        doc(firestore, 'transactions', snapshot.docs[0].id),
-        newData
-      )
+      await updateDoc(doc(firestore, devName, snapshot.docs[0].id), newData)
       console.log(`Updated new transactions for ${walletName} to Firestore`)
     } else {
-      await addDoc(collection(firestore, 'transactions'), {
+      await addDoc(collection(firestore, devName), {
         address,
         txs: Array.from(txHashes)
       })
@@ -197,7 +196,7 @@ const processTransactions = (transactions, address, walletName, wallets) => {
         break
     }
 
-    sendTelegramMessage(`${message} \n\n [View on Mintscan](${txLink})`)
+    // sendTelegramMessage(`${message} \n\n [View on Mintscan](${txLink})`)
   })
 }
 
