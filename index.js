@@ -1,5 +1,6 @@
 import axios from 'axios'
 import fs from 'fs/promises'
+import { Command } from 'commander'
 import {
   collection,
   where,
@@ -18,6 +19,19 @@ const TYPES = [
   '/cosmos.staking.v1beta1.MsgUndelegate'
   //   '/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward',
 ]
+
+const program = new Command()
+program.option('-n, --name <fileName>', 'Specify the name of the config file')
+program.parse()
+
+if (!program.opts().name) {
+  console.error(
+    'Please specify the name of the config file using --name option'
+  )
+  process.exit(1)
+}
+
+const fileName = `${program.opts().name}.json`
 
 const callAPI = async (wallet, fileName, wallets) => {
   const { address, hex, name } = wallet
@@ -75,17 +89,17 @@ const readFile = async fileName => {
   }
 }
 
-const callAPIsForAllFiles = async () => {
-  const fileNames = ['hka.json']
+// const callAPIsForAllFiles = async () => {
+//   const fileNames = ['hka.json']
 
-  try {
-    for (const fileName of fileNames) {
-      await readFile(fileName)
-    }
-  } catch (error) {
-    console.error('Error calling APIs for all files:', error)
-  }
-}
+//   try {
+//     for (const fileName of fileNames) {
+//       await readFile(fileName)
+//     }
+//   } catch (error) {
+//     console.error('Error calling APIs for all files:', error)
+//   }
+// }
 
 const getPreviousTxHashesFromFirestore = async address => {
   try {
@@ -150,7 +164,7 @@ const processTransactions = (transactions, address, walletName, wallets) => {
     const msg_string = JSON.parse(tx.tx_messages[0].msg_string)
     const txHash = tx.tx_hash
     const txLink = `https://mintscan.io/cosmos/transactions/${txHash}`
-    const walletLink = `https://mintscan.io/cosmos/transactions/${address}`
+    const walletLink = `https://mintscan.io/cosmos/address/${address}`
     let message = ''
 
     switch (type) {
@@ -165,28 +179,25 @@ const processTransactions = (transactions, address, walletName, wallets) => {
           : toWalletAddress
         const amount = Number(msg_string?.amount?.[0]?.amount) / 1_000_000
 
-        message = `➡️ Wallet [${walletName}](${walletLink}) just sent ${amount} ATOM to [${toWalletName}](${toWalletMintscanLink}).`
+        message = `➡️ Wallet [${walletName}](${walletLink}) just sent ${amount} ATOM to [${toWalletName}](${toWalletMintscanLink})\n`
         break
       //   case '/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward':
-      //     message = `💰 Wallet [${walletName}](${walletLink}) just claimed reward`
+      //     message = `💰 Wallet [${walletName}](${walletLink}) just claimed reward\n`
       //     break
       case '/cosmos.staking.v1beta1.MsgUndelegate':
         const unstakedAmount = Number(msg_string?.amount?.amount) / 1_000_000
 
-        message = `‼️ Wallet [${walletName}](${walletLink}) just unstaked ${unstakedAmount} ATOM`
+        message = `‼️ Wallet [${walletName}](${walletLink}) just unstaked ${unstakedAmount} ATOM\n`
         break
       default:
         break
     }
 
-    console.log(message, txLink)
-
-    // sendTelegramMessage(`${message} [View on Mintscan](${mintscanLink})`, {
-    //   parse_mode: 'Markdown'
-    // })
+    sendTelegramMessage(`${message} \n\n [View on Mintscan](${txLink})`)
   })
 }
 
 setInterval(() => {
-  callAPIsForAllFiles()
+  //   callAPIsForAllFiles()
+  readFile(fileName)
 }, 10000)

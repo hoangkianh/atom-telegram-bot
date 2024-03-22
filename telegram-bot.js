@@ -6,7 +6,9 @@ const bot = new TelegramBot(token, { polling: true })
 
 const sendTelegramMessage = message => {
   bot
-    .sendMessage(chatId, message)
+    .sendMessage(chatId, message, {
+      parse_mode: 'Markdown'
+    })
     .then(() => console.log('Message sent successfully'))
     .catch(error => console.error('Error sending message:', error))
 }
