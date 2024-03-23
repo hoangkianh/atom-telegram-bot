@@ -14,7 +14,7 @@ import {
 import firestore from '../firebaseConfig.js'
 
 const token = '7097049447:AAHHufxTLKkgs15uLMXyiXTX_C-PJnfxdpk'
-const chatId = '-4175958558'
+const chatId = '-1002095317296,'
 
 const bot = new TelegramBot(token, { polling: true })
 const program = new Command()
@@ -82,7 +82,7 @@ const callAPI = async (wallet, fileName, wallets) => {
 
 const trackWallet = async fileName => {
   try {
-    const fileContent = await fs.readFile(`wallets/${fileName}`, 'utf8')
+    const fileContent = await fs.readFile(`../wallets/${fileName}`, 'utf8')
     const wallets = JSON.parse(fileContent)
 
     await Promise.all(
