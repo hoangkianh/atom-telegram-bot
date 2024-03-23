@@ -66,6 +66,39 @@ const getStakingBalances = async wallets => {
   }
 }
 
+const getUnstakedINUXBalances = async wallets => {
+  try {
+    const stakingInfo = {}
+
+    const stakingPromises = wallets.map(async ({ address }) => {
+      const response = await axios.get(
+        `https://lcd-cosmoshub.keplr.app/cosmos/staking/v1beta1/delegations/${address}?pagination.limit=1000`
+      )
+      const delegationResponses = response.data.delegation_responses
+
+      delegationResponses.forEach(({ delegation, balance }) => {
+        const { validator_address: validatorAddress } = delegation
+        const stakingAmount = parseFloat(balance.amount)
+
+        if (validatorAddress !== INUX_ADRESS && stakingAmount > 0) {
+          if (stakingInfo[validatorAddress]) {
+            stakingInfo[validatorAddress].push({ address, stakingAmount })
+          } else {
+            stakingInfo[validatorAddress] = [{ address, stakingAmount }]
+          }
+        }
+      })
+    })
+
+    await Promise.all(stakingPromises)
+
+    return stakingInfo
+  } catch (error) {
+    console.error('Error fetching staking balance:', error)
+    return {}
+  }
+}
+
 const getTotalTxs = async wallets => {
   try {
     let totalTxs = 0
@@ -133,6 +166,160 @@ const getTextMessage = async (
   return text
 }
 
+const getStatus = async (chatId, data) => {
+  try {
+    const loadingMessage = await bot.sendMessage(chatId, '⌛️ Loading...', {
+      reply_markup: {
+        inline_keyboard: [[{ text: '❌ Close', callback_data: 'close' }]]
+      }
+    })
+
+    let text = ''
+    const fileName = data
+
+    if (fileName === 'all') {
+      const files = fs.readdirSync('../wallets')
+
+      let totalWallets = 0
+      let totalTxs = 0
+      let totalBalance = 0
+      let index = 0
+      const totalStaking = {}
+
+      for (const file of files) {
+        const wallets = await readFile(`../wallets/${file}`)
+        await bot.editMessageText(
+          `⌛️ Loading ${file.replace('.json', '').toUpperCase()} (${
+            index + 1
+          }/${files.length})...`,
+          {
+            chat_id: chatId,
+            message_id: loadingMessage.message_id,
+            parse_mode: 'Markdown'
+          }
+        )
+
+        totalWallets += wallets.length
+        totalTxs += await getTotalTxs(wallets)
+        totalBalance += await getBalance(wallets)
+
+        const totalStakingBalances = await getStakingBalances(wallets)
+
+        for (const [validator, staking] of Object.entries(
+          totalStakingBalances
+        )) {
+          totalStaking[validator] = (totalStaking[validator] || 0) + staking
+        }
+
+        index++
+      }
+
+      text = await getTextMessage(
+        'all',
+        totalWallets,
+        totalTxs,
+        totalBalance,
+        totalStaking
+      )
+    } else {
+      const wallets = await readFile(`../wallets/${fileName}.json`)
+      const totalTxs = await getTotalTxs(wallets)
+      const totalUatomBalance = await getBalance(wallets)
+      const totalStakingBalance = await getStakingBalances(wallets)
+      text = await getTextMessage(
+        fileName,
+        wallets.length,
+        totalTxs,
+        totalUatomBalance,
+        totalStakingBalance
+      )
+    }
+
+    console.log(text)
+
+    await bot.editMessageText(text, {
+      chat_id: chatId,
+      message_id: loadingMessage.message_id,
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [[{ text: '❌ Close', callback_data: 'close' }]]
+      }
+    })
+  } catch (error) {
+    console.error('Error processing callback query:', error)
+    await bot.sendMessage(
+      chatId,
+      'Error processing command. Please try again later.',
+      {
+        reply_markup: {
+          inline_keyboard: [[{ text: '❌ Close', callback_data: 'close' }]]
+        }
+      }
+    )
+  }
+}
+
+const getUnstakedWallets = async (chatId, data) => {
+  try {
+    const loadingMessage = await bot.sendMessage(chatId, '⌛️ Loading...', {
+      reply_markup: {
+        inline_keyboard: [[{ text: '❌ Close', callback_data: 'close' }]]
+      }
+    })
+
+    const fileName = data
+
+    const wallets = await readFile(`../wallets/${fileName}.json`)
+    const stakingInfo = await getUnstakedINUXBalances(wallets)
+    let text = '📊 Unstaked INUX Balances:\n\n'
+    if (Object.keys(stakingInfo).length === 0) {
+      text += 'No unstaked balances found.'
+    } else {
+      for (const [validatorAddress, stakeDetails] of Object.entries(
+        stakingInfo
+      )) {
+        const validatorMintscanLink = `https://www.mintscan.io/cosmos/validators/${validatorAddress}`
+        text += `🖥️ Validator: [${shortenAddress(
+          validatorAddress
+        )}](${validatorMintscanLink})\n`
+        stakeDetails.forEach(({ address, stakingAmount }) => {
+          const wallet = wallets.find(w => w.address === address)
+          const walletName = wallet
+            ? `${fileName.toUpperCase()}-${wallet.name}`
+            : shortenAddress(address)
+          const walletMintscanLink = `https://www.mintscan.io/cosmos/address/${address}`
+          text += `- Wallet: [${walletName}](${walletMintscanLink}), Staking Amount: ${
+            stakingAmount / 1_000_000
+          } ATOM\n`
+        })
+        text += '\n'
+      }
+    }
+
+    console.log(text)
+
+    await bot.editMessageText(text, {
+      chat_id: chatId,
+      message_id: loadingMessage.message_id,
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [[{ text: '❌ Close', callback_data: 'close' }]]
+      }
+    })
+  } catch (error) {
+    console.error('Error processing callback query:', error)
+    await bot.sendMessage(
+      chatId,
+      'Error processing command. Please try again later.',
+      {
+        reply_markup: {
+          inline_keyboard: [[{ text: '❌ Close', callback_data: 'close' }]]
+        }
+      }
+    )
+  }
+}
+
 const createBot = () => {
   bot.onText(/\/status/, async msg => {
     const chatId = msg.chat.id
@@ -140,30 +327,30 @@ const createBot = () => {
     const options = {
       reply_markup: JSON.stringify({
         inline_keyboard: [
-          [{ text: '👩‍👩‍👧‍👧 Tất cả', callback_data: 'all' }],
+          [{ text: '👩‍👩‍👧‍👧 Tất cả', callback_data: 'status-all' }],
           [
-            { text: 'Dev Mỹ', callback_data: 'my' },
-            { text: 'Dev Dương', callback_data: 'dpa' }
+            { text: 'Dev Mỹ', callback_data: 'status-my' },
+            { text: 'Dev Dương', callback_data: 'status-dpa' }
           ],
           [
-            { text: 'Dev HKA', callback_data: 'hka' },
-            { text: 'Peo', callback_data: 'peo' }
+            { text: 'Dev HKA', callback_data: 'status-hka' },
+            { text: 'Peo', callback_data: 'status-peo' }
           ],
           [
-            { text: 'Thảo', callback_data: 'thao' },
-            { text: 'on-chain master', callback_data: 'vu' }
+            { text: 'Thảo', callback_data: 'status-thao' },
+            { text: 'on-chain master', callback_data: 'status-vu' }
           ],
           [
-            { text: 'Dev Nam', callback_data: 'nam' },
-            { text: 'Tùng', callback_data: 'tung' }
+            { text: 'Dev Nam', callback_data: 'status-nam' },
+            { text: 'Tùng', callback_data: 'status-tung' }
           ],
           [
-            { text: 'Phượng', callback_data: 'phuong' },
-            { text: 'Sugar Baby', callback_data: 'sugar' }
+            { text: 'Phượng', callback_data: 'status-phuong' },
+            { text: 'Sugar Baby', callback_data: 'status-sugar' }
           ],
           [
-            { text: 'Bee', callback_data: 'bee' },
-            { text: 'Tòng', callback_data: 'tong' }
+            { text: 'Bee', callback_data: 'status-bee' },
+            { text: 'Tòng', callback_data: 'status-tong' }
           ],
           [
             { text: 'Chenin', callback_data: 'chenin' },
@@ -178,6 +365,7 @@ const createBot = () => {
   })
 
   bot.onText(/\/wallet/, async msg => {
+    console.log('/wallet')
     const chatId = msg.chat.id
 
     try {
@@ -266,6 +454,48 @@ const createBot = () => {
       )
     }
   })
+  bot.onText(/\/unstaked/, async msg => {
+    const chatId = msg.chat.id
+
+    const options = {
+      reply_markup: JSON.stringify({
+        inline_keyboard: [
+          [{ text: '👩‍👩‍👧‍👧 Tất cả', callback_data: 'unstaked-all' }],
+          [
+            { text: 'Dev Mỹ', callback_data: 'unstaked-my' },
+            { text: 'Dev Dương', callback_data: 'unstaked-dpa' }
+          ],
+          [
+            { text: 'Dev HKA', callback_data: 'unstaked-hka' },
+            { text: 'Peo', callback_data: 'unstaked-peo' }
+          ],
+          [
+            { text: 'Thảo', callback_data: 'unstaked-thao' },
+            { text: 'on-chain master', callback_data: 'unstaked-vu' }
+          ],
+          [
+            { text: 'Dev Nam', callback_data: 'unstaked-nam' },
+            { text: 'Tùng', callback_data: 'unstaked-tung' }
+          ],
+          [
+            { text: 'Phượng', callback_data: 'unstaked-phuong' },
+            { text: 'Sugar Baby', callback_data: 'unstaked-sugar' }
+          ],
+          [
+            { text: 'Bee', callback_data: 'unstaked-bee' },
+            { text: 'Tòng', callback_data: 'unstaked-tong' }
+          ],
+          [
+            { text: 'Chenin', callback_data: 'unstaked-chenin' },
+            { text: 'Vương', callback_data: 'unstaked-vuong' }
+          ],
+          [{ text: '❌ Close', callback_data: 'unstaked-close' }]
+        ]
+      })
+    }
+    console.log('/unstaked')
+    bot.sendMessage(chatId, '👉 SELECT AN OPTION', options)
+  })
 
   bot.on('callback_query', async callbackQuery => {
     const { message, data } = callbackQuery
@@ -280,95 +510,12 @@ const createBot = () => {
       }
     }
 
-    try {
-      const loadingMessage = await bot.sendMessage(chatId, '⌛️ Loading...', {
-        reply_markup: {
-          inline_keyboard: [[{ text: '❌ Close', callback_data: 'close' }]]
-        }
-      })
+    if (data.includes('status-')) {
+      await getStatus(chatId, data.replace('status-', ''))
+    }
 
-      let text = ''
-      const fileName = data
-
-      if (fileName === 'all') {
-        const files = fs.readdirSync('../wallets')
-
-        let totalWallets = 0
-        let totalTxs = 0
-        let totalBalance = 0
-        let index = 0
-        const totalStaking = {}
-
-        for (const file of files) {
-          const wallets = await readFile(`../wallets/${file}`)
-          await bot.editMessageText(
-            `⌛️ Loading ${file.replace('.json', '').toUpperCase()} (${
-              index + 1
-            }/${files.length})...`,
-            {
-              chat_id: chatId,
-              message_id: loadingMessage.message_id,
-              parse_mode: 'Markdown'
-            }
-          )
-
-          totalWallets += wallets.length
-          totalTxs += await getTotalTxs(wallets)
-          totalBalance += await getBalance(wallets)
-
-          const totalStakingBalances = await getStakingBalances(wallets)
-
-          for (const [validator, staking] of Object.entries(
-            totalStakingBalances
-          )) {
-            totalStaking[validator] = (totalStaking[validator] || 0) + staking
-          }
-
-          index++
-        }
-
-        text = await getTextMessage(
-          'all',
-          totalWallets,
-          totalTxs,
-          totalBalance,
-          totalStaking
-        )
-      } else {
-        const wallets = await readFile(`../wallets/${fileName}.json`)
-        const totalTxs = await getTotalTxs(wallets)
-        const totalUatomBalance = await getBalance(wallets)
-        const totalStakingBalance = await getStakingBalances(wallets)
-        text = await getTextMessage(
-          fileName,
-          wallets.length,
-          totalTxs,
-          totalUatomBalance,
-          totalStakingBalance
-        )
-      }
-
-      console.log(text)
-
-      await bot.editMessageText(text, {
-        chat_id: chatId,
-        message_id: loadingMessage.message_id,
-        parse_mode: 'Markdown',
-        reply_markup: {
-          inline_keyboard: [[{ text: '❌ Close', callback_data: 'close' }]]
-        }
-      })
-    } catch (error) {
-      console.error('Error processing callback query:', error)
-      await bot.sendMessage(
-        chatId,
-        'Error processing command. Please try again later.',
-        {
-          reply_markup: {
-            inline_keyboard: [[{ text: '❌ Close', callback_data: 'close' }]]
-          }
-        }
-      )
+    if (data.includes('unstaked-')) {
+      await getUnstakedWallets(chatId, data.replace('unstaked-', ''))
     }
   })
 
