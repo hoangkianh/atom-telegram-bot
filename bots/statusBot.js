@@ -460,7 +460,6 @@ const createBot = () => {
     const options = {
       reply_markup: JSON.stringify({
         inline_keyboard: [
-          [{ text: '👩‍👩‍👧‍👧 Tất cả', callback_data: 'unstaked-all' }],
           [
             { text: 'Dev Mỹ', callback_data: 'unstaked-my' },
             { text: 'Dev Dương', callback_data: 'unstaked-dpa' }
