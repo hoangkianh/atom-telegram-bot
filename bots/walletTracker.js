@@ -11,7 +11,7 @@ import {
   updateDoc,
   doc
 } from 'firebase/firestore'
-import firestore from './firebaseConfig.js'
+import firestore from '../firebaseConfig.js'
 
 const token = '7097049447:AAHHufxTLKkgs15uLMXyiXTX_C-PJnfxdpk'
 const chatId = '-4175958558'

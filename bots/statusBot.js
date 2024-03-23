@@ -1,27 +1,11 @@
 import TelegramBot from 'node-telegram-bot-api'
 import axios from 'axios'
 import fs from 'fs'
+import { readFile, getUserAddressFromFiles, shortenAddress } from '../utils.js'
 
 const INUX_ADRESS = 'cosmosvaloper1zgqal5almcs35eftsgtmls3ahakej6jmnn2wfj'
 const token = '6947889103:AAF7erOM8S-Zr5f-MXLJWXy3NRwzFoUH3Tg'
 const bot = new TelegramBot(token, { polling: true })
-
-const readFile = async fileName => {
-  try {
-    const fileContent = await fs.promises.readFile(`wallets/${fileName}.json`)
-    const data = JSON.parse(fileContent)
-    return data
-  } catch (error) {
-    console.error('Error reading file:', error)
-    return []
-  }
-}
-
-const shortenValidatorAddress = address => {
-  return (
-    address.substring(0, 10) + '...' + address.substring(address.length - 5)
-  )
-}
 
 const getBalance = async wallets => {
   try {
@@ -115,11 +99,19 @@ const getTextMessage = async (
   let totalStaking = 0
   let text = `*--- ${fileName.toUpperCase()} ---*\n\n`
 
-  text += `1️⃣ Total wallets: ${totalWallets}\n\n`
-  text += `2️⃣ Total transactions: ${totalTxs}\n\n`
-  text += `3️⃣ Total balance: ${totalUatomBalance / 1_000_000} ATOM\n\n`
+  if (totalWallets > 1) {
+    text += `1️⃣ Total wallets: ${totalWallets}\n\n`
+  }
+  text += `${
+    totalWallets > 1 ? '2️⃣' : '1️⃣'
+  } Total transactions: ${totalTxs}\n\n`
+  text += `${totalWallets > 1 ? '3️⃣' : '2️⃣'} Total balance: ${
+    totalUatomBalance / 1_000_000
+  } ATOM\n\n`
 
-  text += '4️⃣ Total staking amount on each validator:\n\n'
+  text += `${
+    totalWallets > 1 ? '4️⃣' : '3️⃣'
+  }  Total staking amount on each validator:\n\n`
   Object.entries(totalStakingBalances).forEach(([validatorAddress, amount]) => {
     const validatorMintscanLink = `https://www.mintscan.io/cosmos/validators/${validatorAddress}`
     const atomAmount = amount / 1_000_000
@@ -128,7 +120,7 @@ const getTextMessage = async (
     if (validatorAddress === INUX_ADRESS) {
       text += `- Validator: [Inu X](${validatorMintscanLink}), Amount: ${atomAmount} ATOM\n`
     } else {
-      text += `- Validator: [${shortenValidatorAddress(
+      text += `- Validator: [${shortenAddress(
         validatorAddress
       )}](${validatorMintscanLink}), Amount: ${atomAmount}\n`
     }
@@ -182,15 +174,94 @@ const createBot = () => {
       })
     }
     console.log('/status')
-    bot.sendMessage(chatId, 'CHỌN DEV:', options)
+    bot.sendMessage(chatId, '👉 SELECT AN OPTION', options)
+  })
+
+  bot.onText(/\/wallet/, async msg => {
+    const chatId = msg.chat.id
+
+    try {
+      const enterMessage = await bot.sendMessage(
+        chatId,
+        'Please enter the wallet address:'
+      )
+
+      bot.once('message', async msg => {
+        await bot.deleteMessage(chatId, enterMessage.message_id)
+
+        const walletAddress = msg.text
+        const _shortenAddress = shortenAddress(walletAddress)
+
+        const loadingMessage = await bot.sendMessage(
+          chatId,
+          `⌛️ Loading ${_shortenAddress}`,
+          {
+            reply_markup: {
+              inline_keyboard: [[{ text: '❌ Close', callback_data: 'close' }]]
+            }
+          }
+        )
+
+        const { walletInfo, fileName } = await getUserAddressFromFiles(
+          '../wallets',
+          walletAddress
+        )
+
+        if (walletInfo) {
+          const devName = fileName.replace('.json', '')
+          const walletName = `${devName}-${walletInfo.name}`
+          const balance = await getBalance([walletInfo])
+          const txs = await getTotalTxs([walletInfo])
+          const stakingBalance = await getStakingBalances([walletInfo])
+
+          const text = await getTextMessage(
+            `${_shortenAddress} (${walletName})`,
+            1,
+            txs,
+            balance,
+            stakingBalance
+          )
+
+          await bot.editMessageText(text, {
+            chat_id: chatId,
+            message_id: loadingMessage.message_id,
+            parse_mode: 'Markdown',
+            reply_markup: {
+              inline_keyboard: [[{ text: 'Close', callback_data: 'close' }]]
+            }
+          })
+        } else {
+          await bot.editMessageText('Wallet address not found.', {
+            chat_id: chatId,
+            message_id: loadingMessage.message_id,
+            parse_mode: 'Markdown',
+            reply_markup: {
+              inline_keyboard: [[{ text: '❌ Close', callback_data: 'close' }]]
+            }
+          })
+        }
+      })
+    } catch (error) {
+      console.error('Error processing /wallets command:', error)
+      await bot.sendMessage(
+        chatId,
+        'Error processing /wallets command. Please try again later.',
+        {
+          reply_markup: {
+            inline_keyboard: [[{ text: '❌ Close', callback_data: 'close' }]]
+          }
+        }
+      )
+    }
   })
 
   bot.on('callback_query', async callbackQuery => {
     const { message, data } = callbackQuery
+    const chatId = message.chat.id
 
     if (data === 'close') {
       try {
-        await bot.deleteMessage(message.chat.id, message.message_id)
+        await bot.deleteMessage(chatId, message.message_id)
         return
       } catch (error) {
         console.error('Error deleting message:', error)
@@ -198,27 +269,36 @@ const createBot = () => {
     }
 
     try {
-      const loadingMessage = await bot.sendMessage(
-        message.chat.id,
-        '⌛️ ⌛️ Loading...',
-        {
-          parse_mode: 'Markdown'
+      const loadingMessage = await bot.sendMessage(chatId, '⌛️ Loading...', {
+        reply_markup: {
+          inline_keyboard: [[{ text: '❌ Close', callback_data: 'close' }]]
         }
-      )
+      })
 
       let text = ''
       const fileName = data
 
       if (fileName === 'all') {
-        const files = fs.readdirSync('wallets')
+        const files = fs.readdirSync('../wallets')
 
         let totalWallets = 0
         let totalTxs = 0
         let totalBalance = 0
+        let index = 0
         const totalStaking = {}
 
         for (const file of files) {
-          const wallets = await readFile(file.replace('.json', ''))
+          const wallets = await readFile(`../wallets/${file}`)
+          await bot.editMessageText(
+            `⌛️ Loading ${file.replace('.json', '').toUpperCase()} (${
+              index + 1
+            }/${files.length})...`,
+            {
+              chat_id: chatId,
+              message_id: loadingMessage.message_id,
+              parse_mode: 'Markdown'
+            }
+          )
 
           totalWallets += wallets.length
           totalTxs += await getTotalTxs(wallets)
@@ -231,6 +311,8 @@ const createBot = () => {
           )) {
             totalStaking[validator] = (totalStaking[validator] || 0) + staking
           }
+
+          index++
         }
 
         text = await getTextMessage(
@@ -241,7 +323,7 @@ const createBot = () => {
           totalStaking
         )
       } else {
-        const wallets = await readFile(fileName)
+        const wallets = await readFile(`../wallets/${fileName}.json`)
         const totalTxs = await getTotalTxs(wallets)
         const totalUatomBalance = await getBalance(wallets)
         const totalStakingBalance = await getStakingBalances(wallets)
@@ -257,7 +339,7 @@ const createBot = () => {
       console.log(text)
 
       await bot.editMessageText(text, {
-        chat_id: message.chat.id,
+        chat_id: chatId,
         message_id: loadingMessage.message_id,
         parse_mode: 'Markdown',
         reply_markup: {
@@ -266,6 +348,15 @@ const createBot = () => {
       })
     } catch (error) {
       console.error('Error processing callback query:', error)
+      await bot.sendMessage(
+        chatId,
+        'Error processing command. Please try again later.',
+        {
+          reply_markup: {
+            inline_keyboard: [[{ text: '❌ Close', callback_data: 'close' }]]
+          }
+        }
+      )
     }
   })
 
@@ -275,4 +366,5 @@ const createBot = () => {
 
   console.log('Bot is running...')
 }
+
 createBot()
