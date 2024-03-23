@@ -489,7 +489,7 @@ const createBot = () => {
             { text: 'Chenin', callback_data: 'unstaked-chenin' },
             { text: 'Vương', callback_data: 'unstaked-vuong' }
           ],
-          [{ text: '❌ Close', callback_data: 'unstaked-close' }]
+          [{ text: '❌ Close', callback_data: 'close' }]
         ]
       })
     }
