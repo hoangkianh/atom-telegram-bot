@@ -338,7 +338,7 @@ const createBot = () => {
           ],
           [
             { text: 'Thảo', callback_data: 'status-thao' },
-            { text: 'on-chain master', callback_data: 'status-vu' }
+            { text: '🐪 Vũ', callback_data: 'status-vu' }
           ],
           [
             { text: 'Dev Nam', callback_data: 'status-nam' },
@@ -470,7 +470,7 @@ const createBot = () => {
           ],
           [
             { text: 'Thảo', callback_data: 'unstaked-thao' },
-            { text: 'on-chain master', callback_data: 'unstaked-vu' }
+            { text: '🐪 Vũ', callback_data: 'unstaked-vu' }
           ],
           [
             { text: 'Dev Nam', callback_data: 'unstaked-nam' },
