@@ -183,13 +183,25 @@ const createBot = () => {
     try {
       const enterMessage = await bot.sendMessage(
         chatId,
-        'Please enter the wallet address:'
+        'Please enter the wallet address:',
+        {
+          reply_markup: {
+            keyboard: [[{ text: '❌ Cancel' }]],
+            resize_keyboard: true,
+            one_time_keyboard: true
+          }
+        }
       )
 
-      bot.once('message', async msg => {
+      bot.once('message', async _msg => {
         await bot.deleteMessage(chatId, enterMessage.message_id)
 
-        const walletAddress = msg.text
+        if (_msg.text === '❌ Cancel') {
+          await bot.deleteMessage(chatId, _msg.message_id)
+          return
+        }
+
+        const walletAddress = _msg.text
         const _shortenAddress = shortenAddress(walletAddress)
 
         const loadingMessage = await bot.sendMessage(
@@ -227,7 +239,7 @@ const createBot = () => {
             message_id: loadingMessage.message_id,
             parse_mode: 'Markdown',
             reply_markup: {
-              inline_keyboard: [[{ text: 'Close', callback_data: 'close' }]]
+              inline_keyboard: [[{ text: '❌ Close', callback_data: 'close' }]]
             }
           })
         } else {
@@ -242,7 +254,7 @@ const createBot = () => {
         }
       })
     } catch (error) {
-      console.error('Error processing /wallets command:', error)
+      // console.error('Error processing /wallets command:', error)
       await bot.sendMessage(
         chatId,
         'Error processing /wallets command. Please try again later.',
