@@ -122,13 +122,13 @@ const getTextMessage = async (
     } else {
       text += `- Validator: [${shortenAddress(
         validatorAddress
-      )}](${validatorMintscanLink}), Amount: ${atomAmount}\n`
+      )}](${validatorMintscanLink}), Amount: ${atomAmount} ATOM\n`
     }
-
-    text += `\n⚛️ Total ATOM: ${
-      (totalUatomBalance + totalStaking) / 1_000_000
-    } ATOM`
   })
+
+  text += `\n⚛️ Total ATOM: ${
+    (totalUatomBalance + totalStaking) / 1_000_000
+  } ATOM`
 
   return text
 }
