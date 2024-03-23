@@ -353,8 +353,8 @@ const createBot = () => {
             { text: 'Tòng', callback_data: 'status-tong' }
           ],
           [
-            { text: 'Chenin', callback_data: 'chenin' },
-            { text: 'Vương', callback_data: 'vuong' }
+            { text: 'Chenin', callback_data: 'status-chenin' },
+            { text: 'Vương', callback_data: 'status-vuong' }
           ],
           [{ text: '❌ Close', callback_data: 'close' }]
         ]
