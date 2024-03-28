@@ -212,4 +212,4 @@ const sendTelegramMessage = message => {
 setInterval(() => {
   //   callAPIsForAllFiles()
   trackWallet(fileName)
-}, 10000)
+}, 1200000)
