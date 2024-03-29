@@ -6,6 +6,21 @@ import { readFile, getUserAddressFromFiles, shortenAddress } from '../utils.js'
 const INUX_ADRESS = 'cosmosvaloper1zgqal5almcs35eftsgtmls3ahakej6jmnn2wfj'
 const token = '6947889103:AAF7erOM8S-Zr5f-MXLJWXy3NRwzFoUH3Tg'
 const bot = new TelegramBot(token, { polling: true })
+const allowedUsernames = [
+  'hoangkianh',
+  'Leon_Tyrano',
+  'oliverngg',
+  'BlueBee_TH',
+  'DPA99',
+  'vubulldog',
+  'tungjungle',
+  'inthelab000',
+  'acvantt',
+  'EdenJame',
+  'raptor_md',
+  'Cespop',
+  'mandudlc'
+]
 
 const getBalance = async wallets => {
   try {
@@ -401,6 +416,18 @@ const getWardenAirdrop = async (chatId, data) => {
 const createBot = () => {
   bot.onText(/\/status/, async msg => {
     const chatId = msg.chat.id
+    const isAllowedUser = allowedUsernames.includes(msg.chat.username)
+
+    if (!isAllowedUser) {
+      await bot.sendMessage(
+        msg.chat.id,
+        'You are not authorized to use this command.'
+      )
+      console.log(
+        `${msg.chat.username} You are not authorized to use this command.`
+      )
+      return
+    }
 
     const options = {
       reply_markup: JSON.stringify({
@@ -445,6 +472,18 @@ const createBot = () => {
   bot.onText(/\/wallet/, async msg => {
     console.log('/wallet')
     const chatId = msg.chat.id
+    const isAllowedUser = allowedUsernames.includes(msg.chat.username)
+
+    if (!isAllowedUser) {
+      await bot.sendMessage(
+        msg.chat.id,
+        'You are not authorized to use this command.'
+      )
+      console.log(
+        `${msg.chat.username} You are not authorized to use this command.`
+      )
+      return
+    }
 
     try {
       const enterMessage = await bot.sendMessage(
@@ -532,8 +571,21 @@ const createBot = () => {
       )
     }
   })
+
   bot.onText(/\/unstaked/, async msg => {
     const chatId = msg.chat.id
+    const isAllowedUser = allowedUsernames.includes(msg.chat.username)
+
+    if (!isAllowedUser) {
+      await bot.sendMessage(
+        msg.chat.id,
+        'You are not authorized to use this command.'
+      )
+      console.log(
+        `@${msg.chat.username} You are not authorized to use this command.`
+      )
+      return
+    }
 
     const options = {
       reply_markup: JSON.stringify({
@@ -576,6 +628,18 @@ const createBot = () => {
 
   bot.onText(/\/warden/, async msg => {
     const chatId = msg.chat.id
+    const isAllowedUser = allowedUsernames.includes(msg.chat.username)
+
+    if (!isAllowedUser) {
+      await bot.sendMessage(
+        msg.chat.id,
+        'You are not authorized to use this command.'
+      )
+      console.log(
+        `@${msg.chat.username} You are not authorized to use this command.`
+      )
+      return
+    }
 
     const options = {
       reply_markup: JSON.stringify({
