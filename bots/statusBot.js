@@ -320,6 +320,84 @@ const getUnstakedWallets = async (chatId, data) => {
   }
 }
 
+const getWardenAirdrop = async (chatId, data) => {
+  const callAPI = async wallets => {
+    const wardPromises = wallets.map(async ({ address }) => {
+      const response = await axios.get(
+        `https://airdrop-api.wardenprotocol.org/api/wallets/${address}/airdrop`
+      )
+      const value = Number(response.data.value)
+      return Number.isNaN(value) ? 0 : value
+    })
+
+    const wardValues = await Promise.all(wardPromises)
+    const totalWarden = wardValues.reduce(
+      (total, value) => total + Number(value),
+      0
+    )
+
+    return totalWarden
+  }
+
+  try {
+    const loadingMessage = await bot.sendMessage(chatId, '⌛️ Loading...', {
+      reply_markup: {
+        inline_keyboard: [[{ text: '❌ Close', callback_data: 'close' }]]
+      }
+    })
+
+    const fileName = data
+    let text = ''
+    let totalWarden = 0
+
+    if (fileName === 'all') {
+      const files = fs.readdirSync('../wallets')
+
+      let index = 0
+
+      for (const file of files) {
+        const wallets = await readFile(`../wallets/${file}`)
+        await bot.editMessageText(
+          `⌛️ Loading ${file.replace('.json', '').toUpperCase()} (${
+            index + 1
+          }/${files.length})...`,
+          {
+            chat_id: chatId,
+            message_id: loadingMessage.message_id,
+            parse_mode: 'Markdown'
+          }
+        )
+
+        totalWarden += await callAPI(wallets)
+        index++
+      }
+    } else {
+      const wallets = await readFile(`../wallets/${fileName}.json`)
+      totalWarden = await callAPI(wallets)
+    }
+    text = `📊 Total WARD Balances: ${totalWarden}`
+    await bot.editMessageText(text, {
+      chat_id: chatId,
+      message_id: loadingMessage.message_id,
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [[{ text: '❌ Close', callback_data: 'close' }]]
+      }
+    })
+  } catch (error) {
+    console.error('Error processing callback query:', error)
+    await bot.sendMessage(
+      chatId,
+      'Error processing command. Please try again later.',
+      {
+        reply_markup: {
+          inline_keyboard: [[{ text: '❌ Close', callback_data: 'close' }]]
+        }
+      }
+    )
+  }
+}
+
 const createBot = () => {
   bot.onText(/\/status/, async msg => {
     const chatId = msg.chat.id
@@ -496,6 +574,49 @@ const createBot = () => {
     bot.sendMessage(chatId, '👉 SELECT AN OPTION', options)
   })
 
+  bot.onText(/\/warden/, async msg => {
+    const chatId = msg.chat.id
+
+    const options = {
+      reply_markup: JSON.stringify({
+        inline_keyboard: [
+          [{ text: '👩‍👩‍👧‍👧 Tất cả', callback_data: 'warden-all' }],
+          [
+            { text: 'Dev Mỹ', callback_data: 'warden-my' },
+            { text: 'Dev Dương', callback_data: 'warden-dpa' }
+          ],
+          [
+            { text: 'Dev HKA', callback_data: 'warden-hka' },
+            { text: 'Peo', callback_data: 'warden-peo' }
+          ],
+          [
+            { text: 'Thảo', callback_data: 'warden-thao' },
+            { text: '🐪 Vũ', callback_data: 'warden-vu' }
+          ],
+          [
+            { text: 'Dev Nam', callback_data: 'warden-nam' },
+            { text: 'Tùng', callback_data: 'warden-tung' }
+          ],
+          [
+            { text: 'Phượng', callback_data: 'warden-phuong' },
+            { text: 'Sugar Baby', callback_data: 'warden-sugar' }
+          ],
+          [
+            { text: 'Bee', callback_data: 'warden-bee' },
+            { text: 'Tòng', callback_data: 'warden-tong' }
+          ],
+          [
+            { text: 'Chenin', callback_data: 'warden-chenin' },
+            { text: 'Vương', callback_data: 'warden-vuong' }
+          ],
+          [{ text: '❌ Close', callback_data: 'close' }]
+        ]
+      })
+    }
+    console.log('/warden')
+    bot.sendMessage(chatId, '👉 SELECT AN OPTION', options)
+  })
+
   bot.on('callback_query', async callbackQuery => {
     const { message, data } = callbackQuery
     const chatId = message.chat.id
@@ -515,6 +636,10 @@ const createBot = () => {
 
     if (data.includes('unstaked-')) {
       await getUnstakedWallets(chatId, data.replace('unstaked-', ''))
+    }
+
+    if (data.includes('warden-')) {
+      await getWardenAirdrop(chatId, data.replace('warden-', ''))
     }
   })
 
