@@ -1,26 +1,16 @@
 import TelegramBot from 'node-telegram-bot-api'
 import axios from 'axios'
 import fs from 'fs'
-import { readFile, getUserAddressFromFiles, shortenAddress } from '../utils.js'
+import {
+  readFile,
+  getUserAddressFromFiles,
+  shortenAddress,
+  readAllowedUsernames
+} from '../utils.js'
 
 const INUX_ADRESS = 'cosmosvaloper1zgqal5almcs35eftsgtmls3ahakej6jmnn2wfj'
 const token = '6947889103:AAF7erOM8S-Zr5f-MXLJWXy3NRwzFoUH3Tg'
 const bot = new TelegramBot(token, { polling: true })
-const allowedUsernames = [
-  'hoangkianh',
-  'Leon_Tyrano',
-  'oliverngg',
-  'BlueBee_TH',
-  'DPA99',
-  'vubulldog',
-  'tungjungle',
-  'inthelab000',
-  'acvantt',
-  'EdenJame',
-  'raptor_md',
-  'Cespop',
-  'mandudlc'
-]
 
 const getBalance = async wallets => {
   try {
@@ -514,6 +504,7 @@ const getHavaAirdrop = async (chatId, data) => {
 const createBot = () => {
   bot.onText(/\/status/, async msg => {
     const chatId = msg.chat.id
+    const allowedUsernames = readAllowedUsernames()
     const isAllowedUser = allowedUsernames.includes(msg.chat.username)
 
     if (!isAllowedUser) {
@@ -570,6 +561,7 @@ const createBot = () => {
   bot.onText(/\/wallet/, async msg => {
     console.log('/wallet')
     const chatId = msg.chat.id
+    const allowedUsernames = readAllowedUsernames()
     const isAllowedUser = allowedUsernames.includes(msg.chat.username)
 
     if (!isAllowedUser) {
@@ -672,6 +664,7 @@ const createBot = () => {
 
   bot.onText(/\/unstaked/, async msg => {
     const chatId = msg.chat.id
+    const allowedUsernames = readAllowedUsernames()
     const isAllowedUser = allowedUsernames.includes(msg.chat.username)
 
     if (!isAllowedUser) {
@@ -726,6 +719,7 @@ const createBot = () => {
 
   bot.onText(/\/warden/, async msg => {
     const chatId = msg.chat.id
+    const allowedUsernames = readAllowedUsernames()
     const isAllowedUser = allowedUsernames.includes(msg.chat.username)
 
     if (!isAllowedUser) {
@@ -781,6 +775,7 @@ const createBot = () => {
 
   bot.onText(/\/hava/, async msg => {
     const chatId = msg.chat.id
+    const allowedUsernames = readAllowedUsernames()
     const isAllowedUser = allowedUsernames.includes(msg.chat.username)
 
     if (!isAllowedUser) {

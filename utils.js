@@ -37,3 +37,14 @@ export const shortenAddress = address => {
     address.substring(0, 10) + '...' + address.substring(address.length - 5)
   )
 }
+
+export const readAllowedUsernames = () => {
+  try {
+    const content = fs.readFileSync('../users.json', 'utf8')
+    const usernames = JSON.parse(content)
+    return usernames
+  } catch (error) {
+    console.error('Lỗi khi đọc tệp JSON:', error)
+    return []
+  }
+}
