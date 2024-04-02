@@ -998,20 +998,5 @@
     "address": "cosmos196hwpt7flcqhkyl4z2tp62zfp8p578f8sjkrnt",
     "hex": "032cb933f6b7acb6f9a8bf28cf8f1247338a823af3585a9f5bc9ae9fb93eb57d1c",
     "name": 200
-  },
-  {
-    "address": "cosmos1cv4lte5rnrvfu0elsslq5wd9kz3eugcma8kxel",
-    "hex": "02f36c7066a6bf181dde38bdc74724e2cff37467418b6676d60225621a2d3acaa7",
-    "name": 201
-  },
-  {
-    "address": "cosmos1skl2j3xa6aweyqhyknlzh7twyhhssssws4cw6u",
-    "hex": "0220e712506b17bdd25cff46c1490e85c165f9fe4d72e619284d7ef25c107e92da",
-    "name": 202
-  },
-  {
-    "address": "cosmos133cyp9p7vgl2ukppfj4mmewmy5zxu3gjgga5dr",
-    "hex": "0324274fc324675d5e63357636a18e5ffb3e51bb49e7f66bbc5e46aaa9aa0fce18",
-    "name": 203
   }
 ]

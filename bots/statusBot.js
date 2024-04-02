@@ -413,6 +413,104 @@ const getWardenAirdrop = async (chatId, data) => {
   }
 }
 
+const getHavaAirdrop = async (chatId, data) => {
+  let totalOptInWallets = 0
+  let nonOptInWallets = []
+
+  const callAPI = async wallets => {
+    const promises = wallets.map(async ({ address }) => {
+      const response = await axios.get(
+        `https://havacoin.xyz/api/v2/balances?cosmos=${address}`
+      )
+      const { total } = response.data
+      if (Number.isNaN(total)) {
+        nonOptInWallets.push(address)
+        return 0
+      } else {
+        totalOptInWallets++
+        return total
+      }
+    })
+    const havaValues = await Promise.all(promises)
+    const totalHava = havaValues.reduce(
+      (total, value) => total + Number(value),
+      0
+    )
+
+    return totalHava
+  }
+
+  try {
+    const loadingMessage = await bot.sendMessage(chatId, '⌛️ Loading...', {
+      reply_markup: {
+        inline_keyboard: [[{ text: '❌ Close', callback_data: 'close' }]]
+      }
+    })
+
+    const fileName = data
+    let text = ''
+    let totalHava = 0
+    let wallets = []
+
+    if (fileName === 'all') {
+      const files = fs.readdirSync('../wallets')
+
+      let index = 0
+
+      for (const file of files) {
+        wallets = await readFile(`../wallets/${file}`)
+        await bot.editMessageText(
+          `⌛️ Loading ${file.replace('.json', '').toUpperCase()} (${
+            index + 1
+          }/${files.length})...`,
+          {
+            chat_id: chatId,
+            message_id: loadingMessage.message_id,
+            parse_mode: 'Markdown'
+          }
+        )
+
+        totalHava += await callAPI(wallets)
+        index++
+      }
+    } else {
+      wallets = await readFile(`../wallets/${fileName}.json`)
+      totalHava = await callAPI(wallets)
+    }
+    text = `📊 Total HAVA Balances: ${totalHava}`
+    text += `\nTotal wallets opted-in: ${totalOptInWallets}`
+    text += `\nTotal wallets non opted-in: ${nonOptInWallets.length}`
+    nonOptInWallets.forEach(address => {
+      const wallet = wallets.find(w => w.address === address)
+      const walletName = wallet
+        ? `${fileName.toUpperCase()}-${wallet.name}`
+        : shortenAddress(address)
+      const walletMintscanLink = `https://www.mintscan.io/cosmos/address/${address}`
+      text += `- Wallet: [${walletName}](${walletMintscanLink})\n`
+    })
+
+    await bot.editMessageText(text, {
+      chat_id: chatId,
+      message_id: loadingMessage.message_id,
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [[{ text: '❌ Close', callback_data: 'close' }]]
+      }
+    })
+  } catch (error) {
+    console.error('Error processing callback query:', error)
+    await bot.sendMessage(
+      chatId,
+      'Error processing command. Please try again later.',
+      {
+        reply_markup: {
+          inline_keyboard: [[{ text: '❌ Close', callback_data: 'close' }]]
+        }
+      }
+    )
+  }
+}
+
 const createBot = () => {
   bot.onText(/\/status/, async msg => {
     const chatId = msg.chat.id
@@ -681,6 +779,61 @@ const createBot = () => {
     bot.sendMessage(chatId, '👉 SELECT AN OPTION', options)
   })
 
+  bot.onText(/\/hava/, async msg => {
+    const chatId = msg.chat.id
+    const isAllowedUser = allowedUsernames.includes(msg.chat.username)
+
+    if (!isAllowedUser) {
+      await bot.sendMessage(
+        msg.chat.id,
+        'You are not authorized to use this command.'
+      )
+      console.log(
+        `@${msg.chat.username} You are not authorized to use this command.`
+      )
+      return
+    }
+
+    const options = {
+      reply_markup: JSON.stringify({
+        inline_keyboard: [
+          [{ text: '👩‍👩‍👧‍👧 Tất cả', callback_data: 'hava-all' }],
+          [
+            { text: 'Dev Mỹ', callback_data: 'hava-my' },
+            { text: 'Dev Dương', callback_data: 'hava-dpa' }
+          ],
+          [
+            { text: 'Dev HKA', callback_data: 'hava-hka' },
+            { text: 'Peo', callback_data: 'hava-peo' }
+          ],
+          [
+            { text: 'Thảo', callback_data: 'hava-thao' },
+            { text: '🐪 Vũ', callback_data: 'hava-vu' }
+          ],
+          [
+            { text: 'Dev Nam', callback_data: 'hava-nam' },
+            { text: 'Tùng', callback_data: 'hava-tung' }
+          ],
+          [
+            { text: 'Phượng', callback_data: 'hava-phuong' },
+            { text: 'Sugar Baby', callback_data: 'hava-sugar' }
+          ],
+          [
+            { text: 'Bee', callback_data: 'hava-bee' },
+            { text: 'Tòng', callback_data: 'hava-tong' }
+          ],
+          [
+            { text: 'Chenin', callback_data: 'hava-chenin' },
+            { text: 'Vương', callback_data: 'hava-vuong' }
+          ],
+          [{ text: '❌ Close', callback_data: 'close' }]
+        ]
+      })
+    }
+    console.log('/hava')
+    bot.sendMessage(chatId, '👉 SELECT AN OPTION', options)
+  })
+
   bot.on('callback_query', async callbackQuery => {
     const { message, data } = callbackQuery
     const chatId = message.chat.id
@@ -704,6 +857,10 @@ const createBot = () => {
 
     if (data.includes('warden-')) {
       await getWardenAirdrop(chatId, data.replace('warden-', ''))
+    }
+
+    if (data.includes('hava-')) {
+      await getHavaAirdrop(chatId, data.replace('hava-', ''))
     }
   })
 
