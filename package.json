@@ -7,6 +7,7 @@
   "author": "hoangkianh <hoangkianh31592@gmail.com>",
   "license": "MIT",
   "dependencies": {
+    "@cosmjs/encoding": "^0.32.3",
     "axios": "^1.6.8",
     "commander": "^12.0.0",
     "firebase": "^10.9.0",
