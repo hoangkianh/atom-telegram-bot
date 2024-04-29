@@ -10,7 +10,15 @@ import {
 
 const INUX_ADRESS = 'cosmosvaloper1zgqal5almcs35eftsgtmls3ahakej6jmnn2wfj'
 const token = '6947889103:AAF7erOM8S-Zr5f-MXLJWXy3NRwzFoUH3Tg'
-const bot = new TelegramBot(token, { polling: true })
+const bot = new TelegramBot(token, {
+  polling: true,
+  request: {
+    agentOptions: {
+      keepAlive: true,
+      family: 4
+    }
+  }
+})
 
 const getBalance = async wallets => {
   try {

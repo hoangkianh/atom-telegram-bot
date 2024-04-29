@@ -16,7 +16,15 @@ import firestore from '../firebaseConfig.js'
 const token = '7097049447:AAHHufxTLKkgs15uLMXyiXTX_C-PJnfxdpk'
 const chatId = '-1002095317296,'
 
-const bot = new TelegramBot(token, { polling: true })
+const bot = new TelegramBot(token, {
+  polling: true,
+  request: {
+    agentOptions: {
+      keepAlive: true,
+      family: 4
+    }
+  }
+})
 const program = new Command()
 program.option('-n, --name <fileName>', 'Specify the name of the config file')
 program.parse()
